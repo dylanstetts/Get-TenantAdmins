@@ -1,22 +1,31 @@
-# Connect to Microsoft Graph with the required scopes
+# Connect to Microsoft Graph
 Connect-MgGraph -Scopes "RoleManagement.Read.Directory", "User.Read.All"
 
 # Get all directory roles
 $roles = Get-MgDirectoryRole
 
-# Prepare an array to store results
+# Prepare results
 $adminUsers = @()
 
 foreach ($role in $roles) {
     $members = Get-MgDirectoryRoleMember -DirectoryRoleId $role.Id
     foreach ($member in $members) {
-        # Get user details
-        $user = Get-MgUser -UserId $member.Id
-        $adminUsers += [PSCustomObject]@{
-            RoleName           = $role.DisplayName
-            DisplayName        = $user.DisplayName
-            UserPrincipalName  = $user.UserPrincipalName
-            UserId             = $user.Id
+        try {
+            $user = Get-MgUser -UserId $member.Id -ErrorAction Stop
+            $adminUsers += [PSCustomObject]@{
+                RoleName           = $role.DisplayName
+                DisplayName        = $user.DisplayName
+                UserPrincipalName  = $user.UserPrincipalName
+                UserId             = $user.Id
+            }
+        } catch {
+            # If user not found, log only the role and GUID
+            $adminUsers += [PSCustomObject]@{
+                RoleName           = $role.DisplayName
+                DisplayName        = "N/A"
+                UserPrincipalName  = "N/A"
+                UserId             = $member.Id
+            }
         }
     }
 }
